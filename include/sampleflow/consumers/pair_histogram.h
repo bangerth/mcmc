@@ -37,6 +37,12 @@ namespace SampleFlow
 {
   namespace Consumers
   {
+    enum class PairHistogramStyle
+    {
+      columns,
+      surface
+    };
+
     /**
      * A Consumer class that implements the creation of a joint histogram of
      * two components of vector-valued samples. This pair histogram can then
@@ -249,7 +255,8 @@ namespace SampleFlow
          *   @endcode
          */
         void
-        write_gnuplot (std::ostream &&output_stream) const;
+        write_gnuplot (std::ostream &&output_stream,
+                       const PairHistogramStyle style = PairHistogramStyle::columns) const;
 
       private:
         /**
@@ -478,79 +485,115 @@ namespace SampleFlow
     template <typename InputType>
     void
     PairHistogram<InputType>::
-    write_gnuplot(std::ostream &&output_stream) const
+    write_gnuplot(std::ostream &&output_stream,
+                  const PairHistogramStyle style) const
     {
       const auto PairHistogram = get();
 
-      // Each bin of the histogram one gets from get() can be interpreted
-      // as a column in x-y space. Plot it as such for gnuplot: We need
-      // the four lines coming from the x-y-plane to the top surface,
-      // plus the four lines that connect them at the top. But we also want
-      // gnuplot to be able to to use hidden line removal, so we really
-      // have to plot everything as rectangles, rather than just as lines.
-      //
-      // gnuplot has a peculiar form of wanting rectangles described to
-      // it. In the current case, each rectangle is described as a patch
-      // of 2x2 lines of points in 3d space separated by one line between
-      // each set of 2 lines; then each rectangle is separated from the
-      // others by two empty lines.
-      for (const auto &bin : PairHistogram)
+      switch (style)
         {
-          const auto bottom_left = std::get<0>(bin);
-          const auto top_right   = std::get<1>(bin);
-          const double x[2] = {bottom_left[0], top_right[0]};
-          const double y[2] = {bottom_left[1], top_right[1]};
+          case PairHistogramStyle::columns:
+          {
+            // Each bin of the histogram one gets from get() can be interpreted
+            // as a column in x-y space. Plot it as such for gnuplot: We need
+            // the four lines coming from the x-y-plane to the top surface,
+            // plus the four lines that connect them at the top. But we also want
+            // gnuplot to be able to to use hidden line removal, so we really
+            // have to plot everything as rectangles, rather than just as lines.
+            //
+            // gnuplot has a peculiar form of wanting rectangles described to
+            // it. In the current case, each rectangle is described as a patch
+            // of 2x2 lines of points in 3d space separated by one line between
+            // each set of 2 lines; then each rectangle is separated from the
+            // others by two empty lines.
+            for (const auto &bin : PairHistogram)
+              {
+                const auto bottom_left = std::get<0>(bin);
+                const auto top_right   = std::get<1>(bin);
+                const double x[2] = {bottom_left[0], top_right[0]};
+                const double y[2] = {bottom_left[1], top_right[1]};
 
-          const auto height      = std::get<2>(bin);
+                const auto height      = std::get<2>(bin);
 
-          // front surface
-          output_stream << x[0] << ' ' << y[0] << ' ' << 0 << '\n'
-                        << x[1] << ' ' << y[0] << ' ' << 0 << '\n'
-                        << '\n'
-                        << x[0] << ' ' << y[0] << ' ' << height << '\n'
-                        << x[1] << ' ' << y[0] << ' ' << height << '\n'
-                        << "\n\n";
+                // front surface
+                output_stream << x[0] << ' ' << y[0] << ' ' << 0 << '\n'
+                              << x[1] << ' ' << y[0] << ' ' << 0 << '\n'
+                              << '\n'
+                              << x[0] << ' ' << y[0] << ' ' << height << '\n'
+                              << x[1] << ' ' << y[0] << ' ' << height << '\n'
+                              << "\n\n";
 
-          // back surface
-          output_stream << x[0] << ' ' << y[1] << ' ' << 0 << '\n'
-                        << x[1] << ' ' << y[1] << ' ' << 0 << '\n'
-                        << '\n'
-                        << x[0] << ' ' << y[1] << ' ' << height << '\n'
-                        << x[1] << ' ' << y[1] << ' ' << height << '\n'
-                        << "\n\n";
+                // back surface
+                output_stream << x[0] << ' ' << y[1] << ' ' << 0 << '\n'
+                              << x[1] << ' ' << y[1] << ' ' << 0 << '\n'
+                              << '\n'
+                              << x[0] << ' ' << y[1] << ' ' << height << '\n'
+                              << x[1] << ' ' << y[1] << ' ' << height << '\n'
+                              << "\n\n";
 
-          // left surface
-          output_stream << x[0] << ' ' << y[0] << ' ' << 0 << '\n'
-                        << x[0] << ' ' << y[1] << ' ' << 0 << '\n'
-                        << '\n'
-                        << x[0] << ' ' << y[0] << ' ' << height << '\n'
-                        << x[0] << ' ' << y[1] << ' ' << height << '\n'
-                        << "\n\n";
+                // left surface
+                output_stream << x[0] << ' ' << y[0] << ' ' << 0 << '\n'
+                              << x[0] << ' ' << y[1] << ' ' << 0 << '\n'
+                              << '\n'
+                              << x[0] << ' ' << y[0] << ' ' << height << '\n'
+                              << x[0] << ' ' << y[1] << ' ' << height << '\n'
+                              << "\n\n";
 
-          // right surface
-          output_stream << x[1] << ' ' << y[0] << ' ' << 0 << '\n'
-                        << x[1] << ' ' << y[1] << ' ' << 0 << '\n'
-                        << '\n'
-                        << x[1] << ' ' << y[0] << ' ' << height << '\n'
-                        << x[1] << ' ' << y[1] << ' ' << height << '\n'
-                        << "\n\n";
+                // right surface
+                output_stream << x[1] << ' ' << y[0] << ' ' << 0 << '\n'
+                              << x[1] << ' ' << y[1] << ' ' << 0 << '\n'
+                              << '\n'
+                              << x[1] << ' ' << y[0] << ' ' << height << '\n'
+                              << x[1] << ' ' << y[1] << ' ' << height << '\n'
+                              << "\n\n";
 
-          // bottom surface
-          output_stream << x[0] << ' ' << y[0] << ' ' << 0 << '\n'
-                        << x[1] << ' ' << y[0] << ' ' << 0 << '\n'
-                        << '\n'
-                        << x[1] << ' ' << y[0] << ' ' << 0 << '\n'
-                        << x[1] << ' ' << y[1] << ' ' << 0 << '\n'
-                        << "\n\n";
+                // bottom surface
+                output_stream << x[0] << ' ' << y[0] << ' ' << 0 << '\n'
+                              << x[1] << ' ' << y[0] << ' ' << 0 << '\n'
+                              << '\n'
+                              << x[1] << ' ' << y[0] << ' ' << 0 << '\n'
+                              << x[1] << ' ' << y[1] << ' ' << 0 << '\n'
+                              << "\n\n";
 
-          // top surface
-          output_stream << x[0] << ' ' << y[0] << ' ' << height << '\n'
-                        << x[1] << ' ' << y[0] << ' ' << height << '\n'
-                        << '\n'
-                        << x[0] << ' ' << y[1] << ' ' << height << '\n'
-                        << x[1] << ' ' << y[1] << ' ' << height << '\n'
-                        << "\n\n";
+                // top surface
+                output_stream << x[0] << ' ' << y[0] << ' ' << height << '\n'
+                              << x[1] << ' ' << y[0] << ' ' << height << '\n'
+                              << '\n'
+                              << x[0] << ' ' << y[1] << ' ' << height << '\n'
+                              << x[1] << ' ' << y[1] << ' ' << height << '\n'
+                              << "\n\n";
+              }
+
+            break;
+          }
+
+
+          case PairHistogramStyle::surface:
+          {
+            unsigned int m=0;
+            for (const auto &bin : PairHistogram)
+              {
+                const auto bottom_left = std::get<0>(bin);
+                const auto top_right   = std::get<1>(bin);
+                const double x[2] = {bottom_left[0], top_right[0]};
+                const double y[2] = {bottom_left[1], top_right[1]};
+
+                const auto height      = std::get<2>(bin);
+
+                output_stream << (x[0] + x[1])/2 << ' ' << (y[0] + y[1])/2 << ' ' << height << '\n';
+
+                ++m;
+                if (m % bins.size1() == 0)
+                  output_stream << '\n';
+              }
+
+            break;
+          }
+
+          default:
+            assert (false); // not currently implemented
         }
+
 
       output_stream << std::flush;
     }
